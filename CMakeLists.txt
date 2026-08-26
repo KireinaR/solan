@@ -12,11 +12,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(asio)
 
-add_executable(lan_share src/main.cpp)
+add_executable(lan_file_share src/main.cpp)
 
-target_include_directories(lan_share PRIVATE ${asio_SOURCE_DIR}/asio/include)
-target_compile_definitions(lan_share PRIVATE ASIO_STANDALONE)
+target_include_directories(lan_file_share PRIVATE ${asio_SOURCE_DIR}/include)
+target_compile_definitions(lan_file_share PRIVATE ASIO_STANDALONE)
 
 if(WIN32)
-    target_link_libraries(lan_share PRIVATE ws2_32 mswsock)
+    target_link_libraries(lan_file_share PRIVATE ws2_32 mswsock)
 endif()
