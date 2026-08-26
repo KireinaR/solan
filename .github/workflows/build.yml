@@ -1,0 +1,12 @@
+name: build
+on: [push, pull_request]
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build build --config Debug
