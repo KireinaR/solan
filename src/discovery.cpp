@@ -7,12 +7,22 @@
 #include <iostream>
 #include <vector>
 
+std::string get_local_ip()
+{
+    asio::io_context io;
+    asio::ip::udp::socket socket(io, asio::ip::udp::v4());
+    socket.connect(asio::ip::udp::endpoint(asio::ip::make_address("8.8.8.8"), 53));
+    return socket.local_endpoint().address().to_string();
+}
+
 void broadcast_presence(unsigned short tcp_port, std::atomic<bool> &stop_flag)
 {
     try
     {
         asio::io_context io;
-        asio::ip::udp::socket socket(io, asio::ip::udp::v4());
+        std::string local_ip = get_local_ip();
+
+        asio::ip::udp::socket socket(io, asio::ip::udp::endpoint(asio::ip::make_address(local_ip), 0));
         socket.set_option(asio::socket_base::broadcast(true));
 
         asio::ip::udp::endpoint broadcast_endpoint(asio::ip::address_v4::broadcast(), DISCOVERY_PORT);

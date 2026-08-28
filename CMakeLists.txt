@@ -32,3 +32,7 @@ target_link_libraries(solan PRIVATE Threads::Threads)
 if(WIN32)
     target_link_libraries(solan PRIVATE ws2_32 mswsock)
 endif()
+
+if(MINGW)
+    target_link_options(solan PRIVATE -static -static-libgcc -static-libstdc++)
+endif()
