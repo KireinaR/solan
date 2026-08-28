@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
 
 constexpr unsigned short PORT = 48562;
 constexpr size_t CHUNK_SIZE = 4096;
