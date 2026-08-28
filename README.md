@@ -1,6 +1,6 @@
 # SOLAN: Send Over LAN
 
-A cross-platform command-line tool for transferring files directly between two machines on the same local network, over raw TCP. No cloud, no third-party server, no account — one machine listens, the other connects and sends.
+A cross-platform command-line tool for transferring files directly between two machines on the same local network, over raw TCP. No cloud, no third-party server, no account - one machine listens, the other connects and sends.
 
 Built as a hands-on project to learn C++ toolchain fundamentals (CMake, dependency management, cross-platform builds) beyond language syntax.
 
@@ -8,8 +8,8 @@ Built as a hands-on project to learn C++ toolchain fundamentals (CMake, dependen
 
 - Direct TCP file transfer between two machines on a LAN
 - Chunked transfer with a custom lightweight wire protocol (filename + size headers, then streamed data)
-- SHA-256 integrity verification — every transfer is hashed client-side during send and re-verified server-side on receipt; a failed check discards the corrupted output automatically
-- Atomic writes — files are written to a temporary name and only renamed to their final name after passing verification, so a dropped connection or failed transfer never leaves a corrupted "finished" file behind
+- SHA-256 integrity verification - every transfer is hashed client-side during send and re-verified server-side on receipt; a failed check discards the corrupted output automatically
+- Atomic writes - files are written to a temporary name and only renamed to their final name after passing verification, so a dropped connection or failed transfer never leaves a corrupted "finished" file behind
 - Cross-platform: builds on Windows (MSVC) and Linux
 - CI-verified builds via GitHub Actions on every push (`ubuntu-latest` and `windows-latest`)
 
@@ -18,7 +18,7 @@ Built as a hands-on project to learn C++ toolchain fundamentals (CMake, dependen
 - CMake 3.20+
 - A C++17 compiler (MSVC on Windows, GCC on Linux)
 - Ninja (recommended build generator)
-- Internet access on first build — dependencies (standalone Asio, PicoSHA2) are fetched automatically via CMake's `FetchContent`, no manual installation needed
+- Internet access on first build - dependencies (standalone Asio, PicoSHA2) are fetched automatically via CMake's `FetchContent`, no manual installation needed
 
 ## Building
 
@@ -76,5 +76,5 @@ Currently supports direct one-to-one transfers with a manually entered IP addres
 
 - **Asio** (standalone, header-only) for TCP networking
 - **PicoSHA2** (header-only) for SHA-256 hashing
-- **CMake** with `FetchContent` for dependency management — no package manager or vendored libraries required
+- **CMake** with `FetchContent` for dependency management - no package manager or vendored libraries required
 - **GitHub Actions** for cross-platform CI
