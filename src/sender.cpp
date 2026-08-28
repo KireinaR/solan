@@ -30,6 +30,17 @@ void run_client(asio::io_context &io, const std::string &host, unsigned short po
     asio::write(socket, asio::buffer(filename));
     asio::write(socket, asio::buffer(&file_size, sizeof(file_size)));
 
+    unsigned char response = 0;
+    asio::read(socket, asio::buffer(&response, sizeof(response)));
+
+    if (response != TRANSFER_ACCEPT)
+    {
+        std::cout << "Receiver rejected transfer." << std::endl;
+        return;
+    }
+
+    std::cout << "Accepted. Sending..." << std::endl;
+
     picosha2::hash256_one_by_one hasher;
     hasher.init();
 

@@ -35,50 +35,70 @@ void run_server(asio::io_context &io, unsigned short port)
             asio::read(socket, asio::buffer(&file_size, sizeof(file_size)));
             std::cout << "Incoming: '" << filename << "' (" << file_size << " bytes)" << std::endl;
 
-            std::string temp_name = "received_" + filename + ".part";
-            std::string final_name = "received_" + filename;
+            std::cout << "Accept? [y/n]: ";
+            char response;
+            std::cin >> response;
 
-            picosha2::hash256_one_by_one hasher;
-            hasher.init();
-
+            if (response != 'y' && response != 'Y')
             {
-                std::ofstream out(temp_name, std::ios::binary);
-                if (!out)
+                unsigned char reject_byte = TRANSFER_REJECT;
+                asio::write(socket, asio::buffer(&reject_byte, sizeof(reject_byte)));
+                std::cout << "Rejected." << std::endl;
+                // skip the rest of this iteration — fall through to the catch-free end of try, loop continues
+            }
+            else
+            {
+                unsigned char accept_byte = TRANSFER_ACCEPT;
+                asio::write(socket, asio::buffer(&accept_byte, sizeof(accept_byte)));
+
+                // everything from here down is your EXISTING logic, unchanged:
+                // temp_name/final_name, hasher.init(), the ofstream block, hash comparison, rename
+
+                std::string temp_name = "received_" + filename + ".part";
+                std::string final_name = "received_" + filename;
+
+                picosha2::hash256_one_by_one hasher;
+                hasher.init();
+
                 {
-                    throw std::runtime_error("Cannot open output file: received_" + filename);
+                    std::ofstream out(temp_name, std::ios::binary);
+                    if (!out)
+                    {
+                        throw std::runtime_error("Cannot open output file: received_" + filename);
+                    }
+
+                    std::vector<char> buffer(CHUNK_SIZE);
+                    uint64_t received = 0;
+                    while (received < file_size)
+                    {
+                        size_t to_read = std::min(CHUNK_SIZE, static_cast<size_t>(file_size - received));
+                        size_t n = asio::read(socket, asio::buffer(buffer.data(), to_read));
+                        hasher.process(buffer.begin(), buffer.begin() + n);
+                        out.write(buffer.data(), n);
+                        received += n;
+                    }
                 }
 
-                std::vector<char> buffer(CHUNK_SIZE);
-                uint64_t received = 0;
-                while (received < file_size)
+                hasher.finish();
+                std::vector<unsigned char> computed_hash(HASH_SIZE);
+                hasher.get_hash_bytes(computed_hash.begin(), computed_hash.end());
+
+                std::vector<unsigned char> received_hash(HASH_SIZE);
+                asio::read(socket, asio::buffer(received_hash));
+
+                if (computed_hash != received_hash)
                 {
-                    size_t to_read = std::min(CHUNK_SIZE, static_cast<size_t>(file_size - received));
-                    size_t n = asio::read(socket, asio::buffer(buffer.data(), to_read));
-                    hasher.process(buffer.begin(), buffer.begin() + n);
-                    out.write(buffer.data(), n);
-                    received += n;
+                    std::filesystem::remove(temp_name);
+                    throw std::runtime_error("CHECKSUM_MISMATCH: File corrupted in transit. Discarded.");
                 }
+
+                if (std::filesystem::exists(final_name))
+                {
+                    std::filesystem::remove(final_name);
+                }
+                std::filesystem::rename(temp_name, final_name);
+                std::cout << "Received " << file_size << " bytes. Verified and saved as '" << final_name << "'." << std::endl;
             }
-
-            hasher.finish();
-            std::vector<unsigned char> computed_hash(HASH_SIZE);
-            hasher.get_hash_bytes(computed_hash.begin(), computed_hash.end());
-
-            std::vector<unsigned char> received_hash(HASH_SIZE);
-            asio::read(socket, asio::buffer(received_hash));
-
-            if (computed_hash != received_hash)
-            {
-                std::filesystem::remove(temp_name);
-                throw std::runtime_error("CHECKSUM_MISMATCH: File corrupted in transit. Discarded.");
-            }
-
-            if (std::filesystem::exists(final_name))
-            {
-                std::filesystem::remove(final_name);
-            }
-            std::filesystem::rename(temp_name, final_name);
-            std::cout << "Received " << file_size << " bytes. Verified and saved as '" << final_name << "'." << std::endl;
         }
         catch (const std::exception &e)
         {
