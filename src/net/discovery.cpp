@@ -5,7 +5,6 @@
 #include <thread>
 #include <set>
 #include <iostream>
-#include <vector>
 
 std::string get_local_ip()
 {

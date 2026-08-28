@@ -1,14 +1,13 @@
 #include "sender.h"
 #include "protocol.h"
 #include "../ui/progress.h"
-
+#include "../ui/colors.h"
 #include <picosha2.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <filesystem>
 #include <stdexcept>
-
 
 void run_client(asio::io_context &io, const std::string &host, unsigned short port, const std::string &filepath)
 {
@@ -38,11 +37,11 @@ void run_client(asio::io_context &io, const std::string &host, unsigned short po
 
     if (response != TRANSFER_ACCEPT)
     {
-        std::cout << "Receiver rejected transfer." << std::endl;
+        std::cout << col::RED << "Transfer rejected by receiver." << col::RESET << std::endl;
         return;
     }
 
-    std::cout << "Accepted. Sending..." << std::endl;
+    std::cout << "Sending..." << std::endl;
 
     picosha2::hash256_one_by_one hasher;
     hasher.init();
@@ -58,12 +57,12 @@ void run_client(asio::io_context &io, const std::string &host, unsigned short po
         sent += n;
         print_progress(sent, file_size, "Sending");
     }
-    
     finish_progress();
+
     hasher.finish();
     std::vector<unsigned char> hash(HASH_SIZE);
     hasher.get_hash_bytes(hash.begin(), hash.end());
     asio::write(socket, asio::buffer(hash));
 
-    std::cout << "Sent " << sent << " bytes ('" << filename << "'), hash appended." << std::endl;
+    std::cout << col::GREEN << "Sent " << sent << " bytes ('" << filename << "')." << col::RESET << std::endl;
 }

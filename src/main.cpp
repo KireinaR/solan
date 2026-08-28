@@ -1,40 +1,30 @@
 #include <asio.hpp>
 #include <iostream>
-#include <atomic>
-
+#include <filesystem>
+#include <vector>
 #include "net/protocol.h"
 #include "net/sender.h"
 #include "net/receiver.h"
+#include "net/archive.h"
+#include "ui/colors.h"
 #include "shell.h"
-#include "net/discovery.h"
 
 void print_usage(const char *prog_name)
 {
     std::cerr << "Usage:\n"
+              << "  " << prog_name << "                              (launch interactive shell)\n"
               << "  " << prog_name << " server\n"
-              << "  " << prog_name << " client <host> <filepath>\n";
+              << "  " << prog_name << " client <host> <file1> [file2] [file3] ...\n";
 }
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 int main(int argc, char *argv[])
 {
-#ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-#endif
+    enable_ansi_support();
 
     if (argc == 1)
     {
         run_shell();
         return 0;
-    }
-
-    if (argc < 2)
-    {
-        print_usage(argv[0]);
-        return 1;
     }
 
     std::string mode = argv[1];
@@ -54,29 +44,20 @@ int main(int argc, char *argv[])
                 print_usage(argv[0]);
                 return 1;
             }
-            run_client(io, argv[2], PORT, argv[3]);
-        }
-        else if (mode == "broadcast-test")
-        {
-            std::atomic<bool> stop_flag{false};
-            std::cout << "Broadcasting as '" << asio::ip::host_name() << "'... Ctrl+C to stop." << std::endl;
-            broadcast_presence(PORT, stop_flag);
-        }
-        else if (mode == "listen-test")
-        {
-            std::cout << "Listening for peers for 5 seconds..." << std::endl;
-            auto peers = discover_peers(5);
-            if (peers.empty())
+
+            std::string host = argv[2];
+            std::vector<std::string> files;
+            for (int i = 3; i < argc; ++i)
             {
-                std::cout << "No peers found." << std::endl;
+                files.push_back(argv[i]);
             }
-            else
-            {
-                for (const auto &p : peers)
-                {
-                    std::cout << "  " << p.ip << " (" << p.hostname << ")" << std::endl;
-                }
-            }
+
+            std::string zip_path = "solan_transfer.zip";
+            create_zip(files, zip_path);
+
+            run_client(io, host, PORT, zip_path);
+
+            std::filesystem::remove(zip_path);
         }
         else
         {
@@ -86,7 +67,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << col::RED << "Error: " << e.what() << col::RESET << std::endl;
         return 1;
     }
 

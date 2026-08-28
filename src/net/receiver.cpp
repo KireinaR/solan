@@ -1,13 +1,14 @@
 #include "receiver.h"
 #include "protocol.h"
 #include "../ui/progress.h"
-
+#include "../ui/colors.h"
 #include <picosha2.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <stdexcept>
 #include <filesystem>
+#include <limits>
 
 void run_server(asio::io_context &io, unsigned short port, bool interactive_exit)
 {
@@ -38,23 +39,20 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
             std::cout << "Incoming: '" << filename << "' (" << file_size << " bytes)" << std::endl;
 
             std::cout << "Accept? [y/n]: ";
-            char response;
+            char response = 'n';
             std::cin >> response;
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
             if (response != 'y' && response != 'Y')
             {
                 unsigned char reject_byte = TRANSFER_REJECT;
                 asio::write(socket, asio::buffer(&reject_byte, sizeof(reject_byte)));
-                std::cout << "Rejected." << std::endl;
-                // skip the rest of this iteration — fall through to the catch-free end of try, loop continues
+                std::cout << col::RED << "Rejected." << col::RESET << std::endl;
             }
             else
             {
                 unsigned char accept_byte = TRANSFER_ACCEPT;
                 asio::write(socket, asio::buffer(&accept_byte, sizeof(accept_byte)));
-
-                // everything from here down is your EXISTING logic, unchanged:
-                // temp_name/final_name, hasher.init(), the ofstream block, hash comparison, rename
 
                 std::string temp_name = "received_" + filename + ".part";
                 std::string final_name = "received_" + filename;
@@ -66,7 +64,7 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
                     std::ofstream out(temp_name, std::ios::binary);
                     if (!out)
                     {
-                        throw std::runtime_error("Cannot open output file: received_" + filename);
+                        throw std::runtime_error("Cannot open output file: " + temp_name);
                     }
 
                     std::vector<char> buffer(CHUNK_SIZE);
@@ -81,8 +79,8 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
                         print_progress(received, file_size, "Receiving");
                     }
                 }
-
                 finish_progress();
+
                 hasher.finish();
                 std::vector<unsigned char> computed_hash(HASH_SIZE);
                 hasher.get_hash_bytes(computed_hash.begin(), computed_hash.end());
@@ -93,7 +91,7 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
                 if (computed_hash != received_hash)
                 {
                     std::filesystem::remove(temp_name);
-                    throw std::runtime_error("CHECKSUM_MISMATCH: File corrupted in transit. Discarded.");
+                    throw std::runtime_error("Checksum mismatch, file corrupted in transit. Discarded.");
                 }
 
                 if (std::filesystem::exists(final_name))
@@ -101,15 +99,13 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
                     std::filesystem::remove(final_name);
                 }
                 std::filesystem::rename(temp_name, final_name);
-                std::cout << "Received " << file_size << " bytes. Verified and saved as '" << final_name << "'." << std::endl;
+                std::cout << col::GREEN << "Received " << file_size << " bytes. Verified and saved as '" << final_name << "'." << col::RESET << std::endl;
             }
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Transfer error: " << e.what() << std::endl;
+            std::cerr << col::RED << "Transfer error: " << e.what() << col::RESET << std::endl;
         }
-
-        std::cout << "Waiting for next connection..." << std::endl;
 
         if (interactive_exit)
         {

@@ -33,6 +33,9 @@ Both sending and receiving show progress as it happens.
 **Cross platform**
 Builds and runs on Windows and Linux, verified on every push via GitHub Actions on both `ubuntu-latest` and `windows-latest`.
 
+**Multi-file transfers**
+Send more than one file at a time. SOLAN packs them into a single zip archive before sending.
+
 ## Requirements
 
 - CMake 3.20 or newer
@@ -43,7 +46,7 @@ Builds and runs on Windows and Linux, verified on every push via GitHub Actions 
 ## Building it
 
 ```bash
-git clone https://github.com/KireinaR/solan.git
+git clone https://github.com/<your-username>/solan.git
 cd solan
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
@@ -173,3 +176,7 @@ solan/
 Right now, peer discovery gives you an IP address and a hostname. A natural next step would be showing the MAC address of discovered peers too, though that turns out to be more involved than it sounds since it means reading the operating system's own ARP table rather than anything available directly over the socket.
 
 An installer for Windows is also on the list, one that would set up the app and add it to your PATH automatically, so you can just type `solan` from any terminal without building it yourself.
+
+## License
+
+MIT
