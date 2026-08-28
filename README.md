@@ -43,7 +43,7 @@ Builds and runs on Windows and Linux, verified on every push via GitHub Actions 
 ## Building it
 
 ```bash
-git clone https://github.com/<your-username>/solan.git
+git clone https://github.com/KireinaR/solan.git
 cd solan
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
@@ -173,7 +173,3 @@ solan/
 Right now, peer discovery gives you an IP address and a hostname. A natural next step would be showing the MAC address of discovered peers too, though that turns out to be more involved than it sounds since it means reading the operating system's own ARP table rather than anything available directly over the socket.
 
 An installer for Windows is also on the list, one that would set up the app and add it to your PATH automatically, so you can just type `solan` from any terminal without building it yourself.
-
-## License
-
-MIT
