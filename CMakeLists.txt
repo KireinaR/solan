@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(lan_file_share LANGUAGES CXX)
+project(solan LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,11 +12,20 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(asio)
 
-add_executable(lan_file_share src/main.cpp)
+FetchContent_Declare(
+    picosha2
+    GIT_REPOSITORY https://github.com/okdshin/PicoSHA2.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(picosha2)
 
-target_include_directories(lan_file_share PRIVATE ${asio_SOURCE_DIR}/include)
-target_compile_definitions(lan_file_share PRIVATE ASIO_STANDALONE)
+target_include_directories(SOLAN PRIVATE ${picosha2_SOURCE_DIR})
+
+add_executable(solan src/main.cpp src/sender.cpp src/receiver.cpp)
+
+target_include_directories(solan PRIVATE ${asio_SOURCE_DIR}/include)
+target_compile_definitions(solan PRIVATE ASIO_STANDALONE)
 
 if(WIN32)
-    target_link_libraries(lan_file_share PRIVATE ws2_32 mswsock)
+    target_link_libraries(solan PRIVATE ws2_32 mswsock)
 endif()
