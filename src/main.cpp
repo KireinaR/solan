@@ -1,11 +1,12 @@
 #include <asio.hpp>
 #include <iostream>
-#include "protocol.h"
-#include "sender.h"
-#include "receiver.h"
-
-#include "discovery.h"
 #include <atomic>
+
+#include "net/protocol.h"
+#include "net/sender.h"
+#include "net/receiver.h"
+#include "shell.h"
+#include "net/discovery.h"
 
 void print_usage(const char *prog_name)
 {
@@ -14,8 +15,22 @@ void print_usage(const char *prog_name)
               << "  " << prog_name << " client <host> <filepath>\n";
 }
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 int main(int argc, char *argv[])
 {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
+    if (argc == 1)
+    {
+        run_shell();
+        return 0;
+    }
+
     if (argc < 2)
     {
         print_usage(argv[0]);

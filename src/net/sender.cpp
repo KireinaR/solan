@@ -1,11 +1,14 @@
 #include "sender.h"
 #include "protocol.h"
+#include "../ui/progress.h"
+
 #include <picosha2.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <filesystem>
 #include <stdexcept>
+
 
 void run_client(asio::io_context &io, const std::string &host, unsigned short port, const std::string &filepath)
 {
@@ -53,8 +56,10 @@ void run_client(asio::io_context &io, const std::string &host, unsigned short po
         hasher.process(buffer.begin(), buffer.begin() + n);
         asio::write(socket, asio::buffer(buffer.data(), n));
         sent += n;
+        print_progress(sent, file_size, "Sending");
     }
-
+    
+    finish_progress();
     hasher.finish();
     std::vector<unsigned char> hash(HASH_SIZE);
     hasher.get_hash_bytes(hash.begin(), hash.end());

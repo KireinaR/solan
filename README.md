@@ -1,80 +1,179 @@
-# SOLAN: Send Over LAN
+# SOLAN, Send Over LAN
 
-A cross-platform command-line tool for transferring files directly between two machines on the same local network, over raw TCP. No cloud, no third-party server, no account - one machine listens, the other connects and sends.
+A command line tool for sending files directly between two computers on the same local network. No cloud storage, no third party server, no account needed. One computer listens, the other one connects and sends. That's it.
 
-Built as a hands-on project to learn C++ toolchain fundamentals (CMake, dependency management, cross-platform builds) beyond language syntax.
+This project started as a way to actually learn C++ properly. Not competitive programming or algorithm puzzles, but the real, practical stuff that tutorials usually skip: how to set up CMake, how to manage third party libraries without a package manager, how to get a project building the same way on both Windows and Linux, and how to structure a codebase so it doesn't fall apart as it grows.
 
-## Features
+## What it can do
 
-- Direct TCP file transfer between two machines on a LAN
-- Chunked transfer with a custom lightweight wire protocol (filename + size headers, then streamed data)
-- SHA-256 integrity verification - every transfer is hashed client-side during send and re-verified server-side on receipt; a failed check discards the corrupted output automatically
-- Atomic writes - files are written to a temporary name and only renamed to their final name after passing verification, so a dropped connection or failed transfer never leaves a corrupted "finished" file behind
-- Cross-platform: builds on Windows (MSVC) and Linux
-- CI-verified builds via GitHub Actions on every push (`ubuntu-latest` and `windows-latest`)
+**Direct file transfer over TCP**
+Send a file straight from one machine to another. No middleman, no upload step.
+
+**Automatic peer discovery**
+Finds other SOLAN instances on the network via UDP broadcast. No need to type IP addresses by hand.
+
+**Interactive shell**
+Run `solan` with no arguments for a small interactive shell, similar in spirit to the MongoDB shell.
+
+**Integrity verification**
+Every file is hashed with SHA-256 on send and re-checked on arrival. A mismatch gets discarded automatically.
+
+**Safe writes**
+Incoming files write to a temporary file first, renamed only after the hash check passes. No broken partial files left behind.
+
+**Accept or reject transfers**
+You get a prompt before any file bytes are transferred, not after.
+
+**Persistent receive mode**
+The receiver keeps listening after each file, handling transfer after transfer in one session.
+
+**Live progress bar**
+Both sending and receiving show progress as it happens.
+
+**Cross platform**
+Builds and runs on Windows and Linux, verified on every push via GitHub Actions on both `ubuntu-latest` and `windows-latest`.
 
 ## Requirements
 
-- CMake 3.20+
+- CMake 3.20 or newer
 - A C++17 compiler (MSVC on Windows, GCC on Linux)
-- Ninja (recommended build generator)
-- Internet access on first build - dependencies (standalone Asio, PicoSHA2) are fetched automatically via CMake's `FetchContent`, no manual installation needed
+- Ninja is recommended as the build generator
+- An internet connection the first time you build, since dependencies (standalone Asio and PicoSHA2) are downloaded automatically through CMake's `FetchContent`. You don't need to install them yourself.
 
-## Building
+## Building it
 
 ```bash
-git clone https://github.com/KireinaR/solan.git
+git clone https://github.com/<your-username>/solan.git
 cd solan
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 ```
 
-On Windows, run this from a **Developer PowerShell for VS 2026** (or equivalent) so the MSVC compiler is on `PATH`.
+On Windows, run these commands from a "Developer PowerShell for VS 2026" (or whichever Visual Studio version you have) so the compiler is properly set up on your PATH.
 
-## Usage
+## Using it
 
-**Start a receiver** (on the machine that will receive the file):
+### The interactive shell
+
+Just run the executable with no arguments:
+
 ```bash
+./solan
+```
+
+You'll land in a small shell that looks something like this:
+
+```
+SOLAN v0.1.0 - Send Over LAN
+Type "help" for commands.
+
+solan >>
+```
+
+From here, `help` shows you the available commands at any point, and `sm <mode>` switches between the two modes:
+
+- `sm receive` puts you in receive mode, where SOLAN starts listening for incoming files and broadcasting its presence on the network so other SOLAN instances can find it.
+- `sm send` puts you in send mode, where you can discover peers and send them files.
+
+**A typical receiving session:**
+
+```
+solan >> sm receive
+
+Receive mode, listening on port 48562
+  Ctrl+C   force-quit while idle
+  exmo     exit receive mode (available after each transfer)
+
+Connected: 192.168.1.39
+Incoming: 'photo.png' (2.3 MB)
+Accept? [y/n]: y
+Receiving [========================================] 100.0%
+Received 2415392 bytes. Verified and saved as 'received_photo.png'.
+Press Enter to keep receiving, or type 'exmo' to exit:
+```
+
+**A typical sending session:**
+
+```
+solan >> sm send
+
+Send mode. Type "help" for commands, "back" to return.
+
+solan:send >> discover
+Scanning (5s)...
+
+Found 1 peer(s):
+  [1] 192.168.1.12  (DESKTOP-JAKE)
+
+solan:send >> send 1 photo.png
+Accepted. Sending...
+Sending [========================================] 100.0%
+Sent 2415392 bytes.
+
+solan:send >> back
+solan >> exit
+bye.
+```
+
+### Direct command line mode
+
+If you'd rather script it or skip the interactive shell entirely, SOLAN also accepts arguments directly:
+
+```bash
+# Start a receiver on the default port
 ./solan server
-```
-This starts listening on port `48562` and prints the machine's status as files arrive.
 
-**Send a file** (from the sending machine):
-```bash
-./solan client <receiver-ip> <path-to-file>
-```
-Example:
-```bash
-./solan client 192.168.1.38 photo.png
+# Send a file to a specific IP address
+./solan client <ip-address> <path-to-file>
 ```
 
-Find the receiving machine's LAN IP with `ip addr` (Linux) or `ipconfig` (Windows).
+This is the same underlying logic as the shell, just without the menu.
 
-The received file is saved as `received_<original-filename>` in the directory the server was run from.
+## How the transfer actually works
 
-## How it works
+SOLAN uses a small custom protocol over a single TCP connection. Roughly, it goes like this:
 
-SOLAN uses a simple custom protocol over a single TCP connection:
+1. The client connects to the server.
+2. The client sends the length of the filename, then the filename itself.
+3. The client sends the file size, as an 8 byte number.
+4. The server reads all of that, then asks the person running it whether to accept the transfer, and sends back a single byte saying yes or no.
+5. If accepted, the client streams the file in small chunks, hashing each chunk with SHA-256 as it goes, and the server writes those chunks to a temporary file while computing its own hash in parallel.
+6. Once the file is fully sent, the client sends its final hash.
+7. The server compares the two hashes. If they match, the temporary file is renamed to its final name. If they don't, the temporary file is deleted and the transfer is reported as failed.
 
-1. Client connects to the server's listening socket.
-2. Client sends the filename length, then the filename itself.
-3. Client sends the file size (8 bytes).
-4. Client streams the file in 4 KB chunks, hashing each chunk as it goes.
-5. Client sends the final SHA-256 digest.
-6. Server writes incoming bytes to a temporary file while computing its own hash in parallel.
-7. Server compares its computed hash against the one it received. On a match, the temp file is renamed to its final name. On a mismatch, the corrupted temp file is deleted and the transfer is reported as failed.
+Peer discovery works separately, over UDP. A machine in receive mode periodically broadcasts a small message containing its hostname and port. Machines in send mode listen for these broadcasts for a few seconds and build a list of who responded.
 
-## Project status
+## Project layout
 
-Currently supports direct one-to-one transfers with a manually entered IP address. 
-
-## Planned next
-1. LAN peer discovery via UDP broadcast, so machines can find each other without typing an IP manually.
-2. Prompt whether to allow file transfer (on receiver end)
+```
+solan/
+├── src/
+│   ├── main.cpp             entry point, dispatches to the shell or direct CLI mode
+│   ├── shell.h/.cpp          the interactive shell (REPL)
+│   ├── net/
+│   │   ├── protocol.h        shared constants (ports, chunk size, etc.)
+│   │   ├── sender.h/.cpp      client side logic
+│   │   ├── receiver.h/.cpp    server side logic
+│   │   └── discovery.h/.cpp   UDP broadcast and peer discovery
+│   └── ui/
+│       └── progress.h/.cpp    the progress bar
+├── CMakeLists.txt
+└── .github/workflows/        GitHub Actions CI config
+```
 
 ## Tech stack
 
-- **Asio** (standalone, header-only) for TCP networking
-- **PicoSHA2** (header-only) for SHA-256 hashing
-- **CMake** with `FetchContent` for dependency management - no package manager or vendored libraries required
-- **GitHub Actions** for cross-platform CI
+- **Asio** (standalone, header only) for the networking layer
+- **PicoSHA2** (header only) for SHA-256 hashing
+- **CMake** with `FetchContent` for dependency management, so there's nothing to install manually
+- **GitHub Actions** for continuous cross platform build verification
+
+## What's next
+
+Right now, peer discovery gives you an IP address and a hostname. A natural next step would be showing the MAC address of discovered peers too, though that turns out to be more involved than it sounds since it means reading the operating system's own ARP table rather than anything available directly over the socket.
+
+An installer for Windows is also on the list, one that would set up the app and add it to your PATH automatically, so you can just type `solan` from any terminal without building it yourself.
+
+## License
+
+MIT

@@ -1,5 +1,7 @@
 #include "receiver.h"
 #include "protocol.h"
+#include "../ui/progress.h"
+
 #include <picosha2.h>
 #include <iostream>
 #include <fstream>
@@ -7,7 +9,7 @@
 #include <stdexcept>
 #include <filesystem>
 
-void run_server(asio::io_context &io, unsigned short port)
+void run_server(asio::io_context &io, unsigned short port, bool interactive_exit)
 {
     asio::ip::tcp::acceptor acceptor(io, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
     std::cout << "Listening on port " << port << "..." << std::endl;
@@ -76,9 +78,11 @@ void run_server(asio::io_context &io, unsigned short port)
                         hasher.process(buffer.begin(), buffer.begin() + n);
                         out.write(buffer.data(), n);
                         received += n;
+                        print_progress(received, file_size, "Receiving");
                     }
                 }
 
+                finish_progress();
                 hasher.finish();
                 std::vector<unsigned char> computed_hash(HASH_SIZE);
                 hasher.get_hash_bytes(computed_hash.begin(), computed_hash.end());
@@ -106,5 +110,21 @@ void run_server(asio::io_context &io, unsigned short port)
         }
 
         std::cout << "Waiting for next connection..." << std::endl;
+
+        if (interactive_exit)
+        {
+            std::cout << "Press Enter to keep receiving, or type 'exmo' to exit: ";
+            std::string line;
+            std::getline(std::cin, line);
+            if (line == "exmo")
+            {
+                std::cout << "Exiting receive mode." << std::endl;
+                return;
+            }
+        }
+        else
+        {
+            std::cout << "Waiting for next connection..." << std::endl;
+        }
     }
 }

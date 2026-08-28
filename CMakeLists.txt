@@ -20,7 +20,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(picosha2)
 
 
-add_executable(solan src/main.cpp src/sender.cpp src/receiver.cpp src/discovery.cpp)
+add_executable(solan
+    src/main.cpp
+    src/shell.cpp
+    src/net/sender.cpp
+    src/net/receiver.cpp
+    src/net/discovery.cpp
+    src/ui/progress.cpp
+)
 
 target_include_directories(solan PRIVATE ${picosha2_SOURCE_DIR})
 target_include_directories(solan PRIVATE ${asio_SOURCE_DIR}/include)

@@ -11,3 +11,5 @@ constexpr const char* DISCOVERY_MAGIC = "SOLAN";
 
 constexpr unsigned char TRANSFER_ACCEPT = 1;
 constexpr unsigned char TRANSFER_REJECT = 0;
+
+constexpr int PROGRESS_BAR_WIDTH = 40;
