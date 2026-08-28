@@ -19,11 +19,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(picosha2)
 
-add_executable(solan src/main.cpp src/sender.cpp src/receiver.cpp)
+
+add_executable(solan src/main.cpp src/sender.cpp src/receiver.cpp src/discovery.cpp)
 
 target_include_directories(solan PRIVATE ${picosha2_SOURCE_DIR})
 target_include_directories(solan PRIVATE ${asio_SOURCE_DIR}/include)
 target_compile_definitions(solan PRIVATE ASIO_STANDALONE)
+
+find_package(Threads REQUIRED)
+target_link_libraries(solan PRIVATE Threads::Threads)
 
 if(WIN32)
     target_link_libraries(solan PRIVATE ws2_32 mswsock)

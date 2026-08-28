@@ -4,6 +4,9 @@
 #include "sender.h"
 #include "receiver.h"
 
+#include "discovery.h"
+#include <atomic>
+
 void print_usage(const char *prog_name)
 {
     std::cerr << "Usage:\n"
@@ -37,6 +40,28 @@ int main(int argc, char *argv[])
                 return 1;
             }
             run_client(io, argv[2], PORT, argv[3]);
+        }
+        else if (mode == "broadcast-test")
+        {
+            std::atomic<bool> stop_flag{false};
+            std::cout << "Broadcasting as '" << asio::ip::host_name() << "'... Ctrl+C to stop." << std::endl;
+            broadcast_presence(PORT, stop_flag);
+        }
+        else if (mode == "listen-test")
+        {
+            std::cout << "Listening for peers for 5 seconds..." << std::endl;
+            auto peers = discover_peers(5);
+            if (peers.empty())
+            {
+                std::cout << "No peers found." << std::endl;
+            }
+            else
+            {
+                for (const auto &p : peers)
+                {
+                    std::cout << "  " << p.ip << " (" << p.hostname << ")" << std::endl;
+                }
+            }
         }
         else
         {
