@@ -31,12 +31,13 @@ add_executable(solan
 
 target_include_directories(solan PRIVATE ${picosha2_SOURCE_DIR})
 target_include_directories(solan PRIVATE ${asio_SOURCE_DIR}/include)
-target_compile_definitions(solan PRIVATE ASIO_STANDALONE _WIN32_WINNT=0x0A00)
+target_compile_definitions(solan PRIVATE ASIO_STANDALONE)
 
 find_package(Threads REQUIRED)
 target_link_libraries(solan PRIVATE Threads::Threads)
 
 if(WIN32)
+    target_compile_definitions(solan PRIVATE _WIN32_WINNT=0x0A00)
     target_link_libraries(solan PRIVATE ws2_32 mswsock)
 endif()
 
