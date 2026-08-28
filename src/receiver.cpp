@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include <stdexcept>
+#include <filesystem>
 
 void run_server(asio::io_context &io, unsigned short port)
 {
@@ -37,7 +38,7 @@ void run_server(asio::io_context &io, unsigned short port)
     hasher.init();
 
     {
-        std::ofstream out("received_" + filename, std::ios::binary);
+        std::ofstream out(temp_name, std::ios::binary);
         if (!out)
         {
             throw std::runtime_error("Cannot open output file: received_" + filename);
@@ -68,6 +69,10 @@ void run_server(asio::io_context &io, unsigned short port)
         throw std::runtime_error("Checksum mismatch — file corrupted in transit. Discarded.");
     }
 
+    if (std::filesystem::exists(final_name))
+    {
+        std::filesystem::remove(final_name);
+    }
     std::filesystem::rename(temp_name, final_name);
     std::cout << "Received " << file_size << " bytes. Verified and saved as '" << final_name << "'." << std::endl;
 }
