@@ -43,7 +43,7 @@ Builds and runs on Windows and Linux, verified on every push via GitHub Actions 
 ## Building it
 
 ```bash
-git clone https://github.com/<your-username>/solan.git
+git clone https://github.com/KireinaR/solan.git
 cd solan
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
