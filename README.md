@@ -46,7 +46,7 @@ Send more than one file at a time. SOLAN packs a batch into a single zip archive
 ## Building it
 
 ```bash
-git clone https://github.com/<your-username>/solan.git
+git clone https://github.com/KireinaR/solan.git
 cd solan
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
