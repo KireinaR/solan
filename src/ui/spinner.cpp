@@ -1,21 +1,28 @@
-#include "spinner.h"
-#include "colors.h"
-#include <iostream>
-#include <thread>
-#include <chrono>
+#include "ui/spinner.h"
 
-void run_spinner(const std::string &label, std::atomic<bool> &stop_flag)
+namespace
 {
-    static const char* frames[] = {"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"};
-    constexpr int frame_count = 8;
-    int i = 0;
+    // portal: WaitingSpinner, FPS time.Second / 12
+    const char* const WAITING_FRAMES[] = {
+        "⠋ ", "⠙ ", "⠹ ", "⠸ ", "⠼ ", "⠴ ", "⠦ ", "⠧ ", "⠇ ", "⠏ "};
 
-    while (!stop_flag.load())
-    {
-        std::cout << "\r" << col::CYAN << frames[i % frame_count] << col::RESET << "  " << label << std::flush;
-        i++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(80));
-    }
+    // portal: CompressingSpinner, FPS time.Second / 3
+    const char* const COMPRESSING_FRAMES[] = {
+        "┉┉┉", "┅┅┅", "┄┄┄", "┉ ┉", "┅ ┅", "┄ ┄", " ┉ ", " ┉ ", " ┅ ", " ┅ ", " ┄ "};
 
-    std::cout << "\r" << std::string(label.size() + 4, ' ') << "\r" << std::flush;
+    // portal: TransferSpinner, FPS 400ms
+    const char* const TRANSFER_FRAMES[] = {
+        "⇢┄┄", "┄⇢┄", "┄┄⇢", "┄┄┄"};
+
+    // portal: ReceivingSpinner, FPS time.Second / 2
+    const char* const RECEIVING_FRAMES[] = {
+        "┄┄┄", "┄┄⇠", "┄⇠┄", "⇠┄┄"};
+}
+
+namespace spin
+{
+    const SpinnerStyle WAITING     {WAITING_FRAMES, 10, 83};
+    const SpinnerStyle COMPRESSING {COMPRESSING_FRAMES, 11, 333};
+    const SpinnerStyle TRANSFER    {TRANSFER_FRAMES, 4, 400};
+    const SpinnerStyle RECEIVING   {RECEIVING_FRAMES, 4, 500};
 }

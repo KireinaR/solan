@@ -1,25 +1,51 @@
-#include "receiver.h"
-#include "protocol.h"
-#include "../ui/progress.h"
-#include "../ui/colors.h"
+#include "net/receiver.h"
+#include "net/protocol.h"
+#include "net/discovery.h"
+#include "ui/table.h"
+#include "ui/theme.h"
+#include "ui/text.h"
+#include "ui/spinner.h"
+#include "ui/layout.h"
+#include "ui/status_view.h"
 #include <picosha2.h>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <stdexcept>
+#include <algorithm>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <limits>
+#include <stdexcept>
+#include <vector>
+
+namespace
+{
+    std::string listen_address(unsigned short port)
+    {
+        try
+        {
+            return get_local_ip() + ":" + std::to_string(port);
+        }
+        catch (const std::exception &)
+        {
+            return "port " + std::to_string(port);
+        }
+    }
+}
 
 void run_server(asio::io_context &io, unsigned short port, bool interactive_exit)
 {
     asio::ip::tcp::acceptor acceptor(io, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
-    std::cout << "Listening on port " << port << "..." << std::endl;
+    const std::string address = listen_address(port);
 
     while (true)
     {
         asio::ip::tcp::socket socket(io);
-        acceptor.accept(socket);
-        std::cout << "Connected: " << socket.remote_endpoint().address().to_string() << std::endl;
+        {
+            StatusView waiting(spin::WAITING, "Listening on " + ui::element(address));
+            acceptor.accept(socket);
+        }
+
+        const std::string peer = socket.remote_endpoint().address().to_string();
+        ui::task("Incoming from " + ui::element(peer));
 
         try
         {
@@ -28,7 +54,8 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
 
             if (name_len == 0 || name_len > MAX_FILENAME_LEN)
             {
-                throw std::runtime_error("Received invalid filename length: " + std::to_string(name_len));
+                throw std::runtime_error("Received invalid filename length: " +
+                                         std::to_string(name_len));
             }
 
             std::string filename(name_len, '\0');
@@ -36,29 +63,43 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
 
             uint64_t file_size = 0;
             asio::read(socket, asio::buffer(&file_size, sizeof(file_size)));
-            std::cout << "Incoming: '" << filename << "' (" << file_size << " bytes)" << std::endl;
 
-            std::cout << "Accept? [y/n]: ";
+            ui::blank();
+            print_payload_table(filename, file_size);
+            ui::blank();
+
+            ui::line("Accept this transfer?  " + ui::help("(y) accept   (n) reject"));
+            std::cout << ui::PAD << col::ACCENT << ">> " << col::RESET << std::flush;
+
             char response = 'n';
             std::cin >> response;
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            ui::blank();
 
             if (response != 'y' && response != 'Y')
             {
                 unsigned char reject_byte = TRANSFER_REJECT;
                 asio::write(socket, asio::buffer(&reject_byte, sizeof(reject_byte)));
-                std::cout << col::RED << "Rejected." << col::RESET << std::endl;
+                ui::task_fail("Rejected. Nothing was written to disk.");
             }
             else
             {
                 unsigned char accept_byte = TRANSFER_ACCEPT;
                 asio::write(socket, asio::buffer(&accept_byte, sizeof(accept_byte)));
 
-                std::string temp_name = "received_" + filename + ".part";
-                std::string final_name = "received_" + filename;
+                const std::string temp_name = "received_" + filename + ".part";
+                const std::string final_name = "received_" + filename;
 
                 picosha2::hash256_one_by_one hasher;
                 hasher.init();
+
+                // The status block stays alive through verification, so a
+                // failed checksum tears it down instead of leaving a record
+                // of a transfer that did not survive.
+                StatusView receiving(spin::RECEIVING,
+                                     "Receiving " + filename + " " +
+                                         ui::help("(" + format_bytes(file_size) + ")"));
+                receiving.track_bytes(file_size);
 
                 {
                     std::ofstream out(temp_name, std::ios::binary);
@@ -71,15 +112,15 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
                     uint64_t received = 0;
                     while (received < file_size)
                     {
-                        size_t to_read = std::min(CHUNK_SIZE, static_cast<size_t>(file_size - received));
-                        size_t n = asio::read(socket, asio::buffer(buffer.data(), to_read));
+                        const size_t to_read =
+                            std::min(CHUNK_SIZE, static_cast<size_t>(file_size - received));
+                        const size_t n = asio::read(socket, asio::buffer(buffer.data(), to_read));
                         hasher.process(buffer.begin(), buffer.begin() + n);
                         out.write(buffer.data(), n);
                         received += n;
-                        print_progress(received, file_size, "Receiving");
+                        receiving.set_bytes(received);
                     }
                 }
-                finish_progress();
 
                 hasher.finish();
                 std::vector<unsigned char> computed_hash(HASH_SIZE);
@@ -91,7 +132,8 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
                 if (computed_hash != received_hash)
                 {
                     std::filesystem::remove(temp_name);
-                    throw std::runtime_error("Checksum mismatch, file corrupted in transit. Discarded.");
+                    throw std::runtime_error(
+                        "Checksum mismatch. The file was corrupted in transit and discarded.");
                 }
 
                 if (std::filesystem::exists(final_name))
@@ -99,28 +141,36 @@ void run_server(asio::io_context &io, unsigned short port, bool interactive_exit
                     std::filesystem::remove(final_name);
                 }
                 std::filesystem::rename(temp_name, final_name);
-                std::cout << col::GREEN << "Received " << file_size << " bytes. Verified and saved as '" << final_name << "'." << col::RESET << std::endl;
+
+                receiving.finish("Received " + filename + ", SHA-256 verified");
+                ui::blank();
+                ui::task_ok("Saved as " + final_name);
             }
         }
         catch (const std::exception &e)
         {
-            std::cerr << col::RED << "Transfer error: " << e.what() << col::RESET << std::endl;
+            ui::task_fail(std::string("Transfer failed: ") + e.what());
         }
+
+        ui::blank();
+        ui::separator();
 
         if (interactive_exit)
         {
-            std::cout << "Press Enter to keep receiving, or type 'exmo' to exit: ";
+            ui::blank();
+            ui::line(ui::help("Enter    keep receiving"));
+            ui::line(ui::help("exmo     leave receive mode"));
+            std::cout << ui::PAD << col::ACCENT << ">> " << col::RESET << std::flush;
+
             std::string line;
             std::getline(std::cin, line);
             if (line == "exmo")
             {
-                std::cout << "Exiting receive mode." << std::endl;
+                ui::blank();
+                ui::task("Leaving receive mode.");
                 return;
             }
-        }
-        else
-        {
-            std::cout << "Waiting for next connection..." << std::endl;
+            ui::blank();
         }
     }
 }

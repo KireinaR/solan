@@ -1,5 +1,5 @@
-#include "discovery.h"
-#include "protocol.h"
+#include "net/discovery.h"
+#include "net/protocol.h"
 #include <asio.hpp>
 #include <chrono>
 #include <thread>

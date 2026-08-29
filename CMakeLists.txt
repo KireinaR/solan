@@ -29,18 +29,31 @@ FetchContent_MakeAvailable(SimZip)
 
 add_executable(solan
     src/main.cpp
-    src/shell.cpp
+
+    # app -- interactive shell: REPL, screens, transfer flows
+    src/app/shell.cpp
+    src/app/screens.cpp
+    src/app/transfer.cpp
+
+    # net -- discovery, handshake, transfer, archiving
     src/net/sender.cpp
     src/net/receiver.cpp
     src/net/discovery.cpp
     src/net/archive.cpp
-    src/ui/progress.cpp
-    src/ui/colors.cpp
-    src/ui/format.cpp
-    src/ui/box.cpp
+
+    # ui -- terminal rendering
+    src/ui/terminal.cpp
+    src/ui/theme.cpp
+    src/ui/text.cpp
+    src/ui/layout.cpp
+    src/ui/table.cpp
     src/ui/spinner.cpp
+    src/ui/progress.cpp
+    src/ui/status_view.cpp
 )
 
+# Headers are included root-relative, e.g. #include "ui/theme.h"
+target_include_directories(solan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(solan PRIVATE ${asio_SOURCE_DIR}/include)
 target_include_directories(solan PRIVATE ${picosha2_SOURCE_DIR})
 target_compile_definitions(solan PRIVATE ASIO_STANDALONE)

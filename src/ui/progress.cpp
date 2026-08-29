@@ -1,24 +1,41 @@
-#include "progress.h"
-#include "colors.h"
-#include "../net/protocol.h"
-#include <iostream>
-#include <iomanip>
-#include <string>
+#include "ui/progress.h"
+#include "ui/theme.h"
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
 
-void print_progress(uint64_t current, uint64_t total, const char* label)
+std::string progress_bar(double ratio, int total_width)
 {
-    double ratio = total > 0 ? static_cast<double>(current) / static_cast<double>(total) : 0.0;
-    int filled = static_cast<int>(ratio * PROGRESS_BAR_WIDTH);
-    int empty = PROGRESS_BAR_WIDTH - filled;
+    ratio = std::min(1.0, std::max(0.0, ratio));
 
-    std::cout << "\r" << label << " ["
-               << col::GREEN << std::string(filled, '=') << col::RESET
-               << std::string(empty, ' ')
-               << "] " << std::fixed << std::setprecision(1) << (ratio * 100.0) << "%   ";
-    std::cout.flush();
-}
+    char percent[16];
+    std::snprintf(percent, sizeof(percent), "  %.2f%%", ratio * 100.0);
 
-void finish_progress()
-{
-    std::cout << std::endl;
+    int bar_width = total_width - static_cast<int>(std::string(percent).size());
+    if (bar_width < 8) bar_width = 8;
+
+    int filled = static_cast<int>(std::lround(ratio * bar_width));
+    filled = std::min(bar_width, std::max(0, filled));
+
+    std::string out;
+    out.reserve(static_cast<size_t>(bar_width) * 24);
+
+    for (int i = 0; i < filled; ++i)
+    {
+        const double t = bar_width > 1 ? static_cast<double>(i) / (bar_width - 1) : 0.0;
+        out += col::ramp(t);
+        out += "█";
+    }
+
+    if (filled < bar_width)
+    {
+        out += col::FAINT;
+        for (int i = filled; i < bar_width; ++i) out += "░";
+    }
+
+    out += col::MUTED;
+    out += percent;
+    out += col::RESET;
+
+    return out;
 }
