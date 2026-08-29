@@ -36,6 +36,9 @@ add_executable(solan
     src/net/archive.cpp
     src/ui/progress.cpp
     src/ui/colors.cpp
+    src/ui/format.cpp
+    src/ui/box.cpp
+    src/ui/spinner.cpp
 )
 
 target_include_directories(solan PRIVATE ${asio_SOURCE_DIR}/include)

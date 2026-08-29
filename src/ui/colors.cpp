@@ -5,6 +5,8 @@
 
 void enable_ansi_support()
 {
+    SetConsoleOutputCP(CP_UTF8);
+
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return;
 
