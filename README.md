@@ -50,7 +50,7 @@ Send more than one file at a time. SOLAN packs a batch into a single zip archive
 ## Building it
 
 ```bash
-git clone https://github.com/<your-username>/solan.git
+git clone https://github.com/KireinaR/solan.git
 cd solan
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
@@ -122,16 +122,6 @@ Once a sender shows up, you get asked before anything touches your disk:
   1.2 MB / 2.4 MB  ·  8.1 MB/s                              1s remaining
 ```
 
-When it lands, the block stays put as the record of the transfer:
-
-```
-  Received photo.png, SHA-256 verified
-
-  ████████████████████████████████████████████████████████████  100.00%
-  2.4 MB / 2.4 MB  ·  8.1 MB/s average                        1s elapsed
-
-  Saved as received_photo.png
-```
 
 **A typical sending session:**
 
@@ -179,15 +169,6 @@ spinner. One file goes as itself, so there is no packing step:
   1.2 MB / 2.4 MB  ·  8.1 MB/s                              1s remaining
 ```
 
-The finished block stays on screen, so the terminal keeps a record of what
-moved and how fast:
-
-```
-  Sent photo.png, SHA-256 attached
-
-  ████████████████████████████████████████████████████████████  100.00%
-  2.4 MB / 2.4 MB  ·  8.1 MB/s average                        1s elapsed
-```
 
 Hand it more than one file and it packs them first:
 
@@ -277,8 +258,7 @@ solan/
 
 - **Asio** (standalone, header only) for the networking layer
 - **PicoSHA2** (header only) for SHA-256 hashing
-- **CMake** with `FetchContent` for dependency management, so there's nothing to install manually
-- **GitHub Actions** for continuous cross platform build verification
+- **CMake**
 
 ## What's next
 
