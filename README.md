@@ -207,7 +207,7 @@ This is the same underlying logic as the shell, just without the menu.
 
 ## How the transfer actually works
 
-SOLAN uses a small custom protocol over a single TCP connection. Roughly, it goes like this:
+SOLAN uses a small custom protocol over a single TCP connection.
 
 1. The client connects to the server.
 2. The client sends the length of the filename, then the filename itself.
