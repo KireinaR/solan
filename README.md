@@ -2,6 +2,10 @@
 
 A command line tool for sending files directly between two computers on the same local network. No cloud storage, no third party server, no account needed. One computer listens, the other one connects and sends. That's it.
 
+![SOLAN sending a 500 MB file between two machines on the same network](docs/demo.gif)
+
+*A real 500 MB transfer, both ends at once: the sender discovers the receiver on the LAN, the receiver is asked before anything touches its disk, and both keep a verified record when it lands.*
+
 This project started as a way to actually learn C++ properly. Not competitive programming or algorithm puzzles, but the real, practical stuff that tutorials usually skip: how to set up CMake, how to manage third party libraries without a package manager, how to get a project building the same way on both Windows and Linux, and how to structure a codebase so it doesn't fall apart as it grows.
 
 ## What it can do
